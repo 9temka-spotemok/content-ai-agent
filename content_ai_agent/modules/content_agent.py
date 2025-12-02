@@ -220,7 +220,9 @@ Value Proposition: {product_profile.get('value_proposition', '')}
                 return response.choices[0].message.content.strip()
             except Exception as e:
                 # Если ошибка, возвращаем базовый контент
-                return f"Ошибка генерации контента: {str(e)}\n\nТема: {prompt.split('тему: ')[1].split('\"')[0] if 'тему: ' in prompt else 'Не указана'}"
+                error_msg = str(e)
+                topic = prompt.split('тему: ')[1].split('"')[0] if 'тему: ' in prompt else 'Не указана'
+                return f"Ошибка генерации контента: {error_msg}\n\nТема: {topic}"
         
         # Если LLM недоступен, возвращаем информативное сообщение
         topic = prompt.split('тему: ')[1].split('"')[0] if 'тему: ' in prompt else 'контент'
@@ -330,4 +332,3 @@ Value Proposition: {product_profile.get('value_proposition', '')}
             if content.id == content_id:
                 return content
         return None
-
