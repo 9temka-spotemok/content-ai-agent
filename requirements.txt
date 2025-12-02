@@ -1,0 +1,30 @@
+# Content AI Agent - Зависимости
+
+# LLM клиенты (выберите один)
+openai>=1.0.0
+# anthropic>=0.18.0  # Для Claude
+# google-generativeai>=0.3.0  # Для Gemini
+
+# Работа с данными
+pydantic>=2.0.0
+python-dateutil>=2.8.0
+
+# Утилиты
+python-dotenv>=1.0.0
+pyyaml>=6.0
+
+# Опционально: для работы с PDF (если нужно читать фреймворки)
+PyPDF2>=3.0.0
+
+# Для генерации документов
+python-docx>=1.1.0
+reportlab>=4.0.0
+
+# Для веб-интерфейса
+streamlit>=1.28.0
+pyarrow>=10.0.0  # Для работы таблиц Streamlit (st.dataframe)
+# Дополнительные зависимости для Streamlit Cloud
+watchdog>=2.1.0
+# fastapi>=0.104.0
+# uvicorn>=0.24.0
+
