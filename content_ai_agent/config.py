@@ -24,7 +24,13 @@ class Config:
     """Конфигурация системы"""
     
     # API ключи (должны быть установлены через переменные окружения)
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    # Статическое значение читается при импорте модуля
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+    
+    @staticmethod
+    def get_openai_api_key():
+        """Динамически получает API ключ из переменных окружения (всегда актуальное значение)"""
+        return os.getenv("OPENAI_API_KEY", "").strip()
     
     # Модели по умолчанию
     DEFAULT_MODEL = "gpt-4"
