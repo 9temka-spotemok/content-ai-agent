@@ -129,20 +129,42 @@ class ContentAIAgent:
             try:
                 # Формируем контекст для генерации
                 context = ""
-                if self.product_profile:
+                
+                # Используем информацию о продукте из input_data или self.product_profile
+                if input_data.get("name") or input_data.get("description"):
+                    context += f"Продукт: {input_data.get('name', 'Не указан')}\n"
+                    context += f"Описание: {input_data.get('description', 'Не указано')}\n"
+                    if input_data.get("category"):
+                        context += f"Категория: {input_data.get('category')}\n"
+                elif self.product_profile:
                     context += f"Продукт: {self.product_profile.name}\n"
                     context += f"Описание: {self.product_profile.description}\n"
                     context += f"Категория: {self.product_profile.category}\n"
                 
-                # Добавляем контекст предыдущих уровней
+                # Добавляем контекст предыдущих уровней из input_data
                 previous_levels = []
                 level_order = ["market", "niche", "audience", "segment", "pain", "task"]
                 current_index = level_order.index(level) if level in level_order else -1
-                for prev_level in level_order[:current_index]:
-                    if prev_level in self.deep_impact.hypotheses:
-                        prev_choice = self.deep_impact.hypotheses[prev_level].get("final_choice")
-                        if prev_choice:
-                            previous_levels.append(f"{prev_level}: {prev_choice}")
+                
+                # Сначала пытаемся получить из input_data (из web_app)
+                if input_data.get("previous_choices"):
+                    prev_choices = input_data["previous_choices"]
+                    for prev_level in level_order[:current_index]:
+                        if prev_level in prev_choices:
+                            prev_choice_data = prev_choices[prev_level]
+                            if isinstance(prev_choice_data, dict):
+                                prev_choice_name = prev_choice_data.get("name", str(prev_choice_data))
+                            else:
+                                prev_choice_name = str(prev_choice_data)
+                            previous_levels.append(f"{prev_level}: {prev_choice_name}")
+                
+                # Если не нашли в input_data, пытаемся из self.deep_impact.hypotheses
+                if not previous_levels:
+                    for prev_level in level_order[:current_index]:
+                        if prev_level in self.deep_impact.hypotheses:
+                            prev_choice = self.deep_impact.hypotheses[prev_level].get("final_choice")
+                            if prev_choice:
+                                previous_levels.append(f"{prev_level}: {prev_choice}")
                 
                 if previous_levels:
                     context += "\nПредыдущие выборы:\n" + "\n".join(previous_levels)
@@ -242,26 +264,25 @@ class ContentAIAgent:
                     # Ограничиваем количество гипотез до 12 для ускорения обработки
                     if len(hypotheses) > 12:
                         hypotheses = hypotheses[:12]
-                except Exception:
-                    # Если после всех попыток возникла ошибка, создаем демо-гипотезы
-                    hypotheses = [
-                        {
-                            "name": f"Гипотеза {i+1} для {level}",
-                            "description": f"Описание гипотезы {i+1}",
-                            "characteristics": ["Характеристика 1", "Характеристика 2"],
-                            "potential": "Потенциал гипотезы",
-                        }
-                        for i in range(10)
-                    ]
+                        
+                    # Проверяем, что гипотезы не пустые и имеют правильную структуру
+                    if not hypotheses or len(hypotheses) == 0:
+                        raise ValueError("LLM вернул пустой список гипотез")
+                        
+                except (json.JSONDecodeError, ValueError, RuntimeError) as parse_error:
+                    # Если ошибка парсинга или все модели не сработали, пробрасываем дальше
+                    raise RuntimeError(f"Ошибка генерации гипотез: {str(parse_error)}")
+                except Exception as llm_error:
+                    # Другие ошибки LLM (например, проблемы с API ключом)
+                    raise RuntimeError(f"Ошибка при вызове LLM: {str(llm_error)}")
                     
+            except RuntimeError as re:
+                # Пробрасываем RuntimeError дальше, чтобы web_app мог показать реальную ошибку
+                raise re
             except Exception as e:
-                # Если ошибка, создаем демо-гипотезы
-                hypotheses = [
-                    {"name": f"Гипотеза {i+1} для {level}", "description": f"Описание гипотезы {i+1}", 
-                     "characteristics": ["Характеристика 1", "Характеристика 2"], 
-                     "potential": "Потенциал гипотезы"} 
-                    for i in range(10)
-                ]
+                # Если другая ошибка, создаем демо-гипотезы только если это действительно необходимо
+                # Но лучше пробросить ошибку, чтобы пользователь знал о проблеме
+                raise RuntimeError(f"Неожиданная ошибка при генерации гипотез: {str(e)}")
         else:
             # Демо-гипотезы, если LLM недоступен
             hypotheses = [
