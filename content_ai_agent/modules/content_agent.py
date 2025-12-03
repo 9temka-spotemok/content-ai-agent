@@ -241,12 +241,43 @@ Value Proposition: {product_profile.get('value_proposition', '')}
     
     def _extract_title(self, content: str, topic: str) -> str:
         """Извлечение заголовка из контента"""
-        # Простая логика - можно улучшить
-        lines = content.split('\n')
-        for line in lines[:3]:
-            if line.strip() and len(line.strip()) < 100:
-                return line.strip()
-        return topic
+        import re
+        
+        # Убираем лишние пробелы и переносы строк
+        content_clean = content.strip()
+        
+        # Пытаемся найти заголовок в формате "**Заголовок:**" "текст"
+        pattern1 = r'\*\*Заголовок:\*\*\s*["\']?([^"\'\n]+)["\']?'
+        match1 = re.search(pattern1, content_clean, re.IGNORECASE)
+        if match1:
+            title = match1.group(1).strip()
+            if title and len(title) < 150:
+                return title
+        
+        # Пытаемся найти заголовок в кавычках в первой строке
+        pattern2 = r'["\']([^"\'\n]{10,150})["\']'
+        match2 = re.search(pattern2, content_clean[:500])
+        if match2:
+            title = match2.group(1).strip()
+            if title and not title.startswith('Заголовок'):
+                return title
+        
+        # Ищем первую строку без маркдаун-форматирования
+        lines = content_clean.split('\n')
+        for line in lines[:5]:
+            line_clean = line.strip()
+            # Убираем markdown форматирование
+            line_clean = re.sub(r'\*\*([^*]+)\*\*', r'\1', line_clean)
+            line_clean = re.sub(r'#+\s*', '', line_clean)
+            line_clean = re.sub(r'["\']', '', line_clean)
+            
+            # Пропускаем строки с метками типа "Заголовок:", "Тема:" и т.д.
+            if line_clean and len(line_clean) > 10 and len(line_clean) < 150:
+                if not any(marker in line_clean.lower() for marker in ['заголовок:', 'тема:', '**заголовок', 'title:']):
+                    return line_clean
+        
+        # Если ничего не нашли, возвращаем topic
+        return topic if topic else "Без заголовка"
     
     def adapt_to_style(self, content: ContentPiece, 
                        new_style: Dict[str, Any]) -> ContentPiece:
@@ -332,3 +363,4 @@ Value Proposition: {product_profile.get('value_proposition', '')}
             if content.id == content_id:
                 return content
         return None
+
